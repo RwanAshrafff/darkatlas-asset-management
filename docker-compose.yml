@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: darkatlas-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=darkatlas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d darkatlas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cache:
+    image: redis:7-alpine
+    container_name: darkatlas-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: darkatlas-api
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_ASYNC_URI=postgresql+asyncpg://postgres:postgres@db:5432/darkatlas
+      - REDIS_URI=redis://cache:6379/0
+      - JWT_SECRET=super-secret-jwt-key-for-darkatlas-asm-platform-2026
+      - STALE_THRESHOLD_DAYS=30
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    volumes:
+      # Optional: mount local code for development auto-reload
+      - ./app:/app/app
+
+volumes:
+  postgres_data:
+  redis_data:
