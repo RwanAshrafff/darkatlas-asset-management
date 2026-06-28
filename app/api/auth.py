@@ -14,11 +14,15 @@ class TokenResponse(BaseModel):
     tenant_id: UUID
 
 
-@router.post("/token", response_model=TokenResponse, summary="Generate a JWT token for a specific tenant")
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    summary="Generate a JWT token for a specific tenant",
+)
 async def get_token(
     tenant_id: Optional[UUID] = Query(
         None,
-        description="Tenant UUID. Defaults to a standard mock tenant 1: 11111111-1111-1111-1111-111111111111"
+        description="Tenant UUID. Defaults to a standard mock tenant 1: 11111111-1111-1111-1111-111111111111",
     )
 ):
     """
@@ -27,9 +31,6 @@ async def get_token(
     """
     if not tenant_id:
         tenant_id = UUID("11111111-1111-1111-1111-111111111111")
-        
+
     access_token = create_access_token(tenant_id)
-    return TokenResponse(
-        access_token=access_token,
-        tenant_id=tenant_id
-    )
+    return TokenResponse(access_token=access_token, tenant_id=tenant_id)

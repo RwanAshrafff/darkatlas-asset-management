@@ -18,20 +18,22 @@ MOCK_API_KEYS = {
 }
 
 
-def create_access_token(tenant_id: UUID, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    tenant_id: UUID, expires_delta: Optional[timedelta] = None
+) -> str:
     """Create a signed JWT containing the tenant_id claim."""
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode = {
-        "exp": expire,
-        "tenant_id": str(tenant_id),
-        "iss": "darkatlas"
-    }
-    
-    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+
+    to_encode = {"exp": expire, "tenant_id": str(tenant_id), "iss": "darkatlas"}
+
+    encoded_jwt = jwt.encode(
+        to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM
+    )
     return encoded_jwt
 
 
@@ -42,7 +44,7 @@ def decode_access_token(token: str) -> Optional[UUID]:
             token,
             settings.JWT_SECRET,
             algorithms=[settings.JWT_ALGORITHM],
-            issuer="darkatlas"
+            issuer="darkatlas",
         )
         tenant_str = payload.get("tenant_id")
         if not tenant_str:
@@ -68,14 +70,14 @@ async def get_current_tenant_id(
                 return UUID(tenant_str)
             except ValueError:
                 pass
-    
+
     # 2. Try JWT Bearer token
     if bearer:
         token = bearer.credentials
         tenant_id = decode_access_token(token)
         if tenant_id:
             return tenant_id
-            
+
     # 3. Fail if neither is valid
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

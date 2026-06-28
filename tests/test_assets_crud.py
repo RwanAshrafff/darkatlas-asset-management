@@ -15,7 +15,7 @@ async def test_asset_crud_flow(client: AsyncClient):
         "status": "active",
         "source": "manual",
         "tags": ["test"],
-        "metadata": {"owner": "sec-ops"}
+        "metadata": {"owner": "sec-ops"},
     }
     response = await client.post("/api/v1/assets", headers=headers, json=asset_data)
     assert response.status_code == 201
@@ -38,9 +38,11 @@ async def test_asset_crud_flow(client: AsyncClient):
     # 3. Update (Merge metadata)
     update_data = {
         "value": "crud-test-updated.com",
-        "metadata": {"compliance": "hipaa"}
+        "metadata": {"compliance": "hipaa"},
     }
-    response_put = await client.put(f"/api/v1/assets/{asset_id}", headers=headers, json=update_data)
+    response_put = await client.put(
+        f"/api/v1/assets/{asset_id}", headers=headers, json=update_data
+    )
     assert response_put.status_code == 200
     updated = response_put.json()
     assert updated["value"] == "crud-test-updated.com"
@@ -61,12 +63,32 @@ async def test_assets_list_search_and_pagination(client: AsyncClient):
     """Test filtering, sorting, offset, and keyset pagination on list endpoint."""
     # Create multiple assets
     assets_to_create = [
-        {"type": "domain", "value": "apple.com", "status": "active", "tags": ["tech", "fruit"]},
-        {"type": "domain", "value": "banana.com", "status": "active", "tags": ["fruit"]},
-        {"type": "subdomain", "value": "api.banana.com", "status": "stale", "tags": ["tech", "api"]},
-        {"type": "ip_address", "value": "1.1.1.1", "status": "archived", "tags": ["cloudflare", "dns"]},
+        {
+            "type": "domain",
+            "value": "apple.com",
+            "status": "active",
+            "tags": ["tech", "fruit"],
+        },
+        {
+            "type": "domain",
+            "value": "banana.com",
+            "status": "active",
+            "tags": ["fruit"],
+        },
+        {
+            "type": "subdomain",
+            "value": "api.banana.com",
+            "status": "stale",
+            "tags": ["tech", "api"],
+        },
+        {
+            "type": "ip_address",
+            "value": "1.1.1.1",
+            "status": "archived",
+            "tags": ["cloudflare", "dns"],
+        },
     ]
-    
+
     for item in assets_to_create:
         res = await client.post("/api/v1/assets", headers=headers, json=item)
         assert res.status_code == 201
@@ -89,27 +111,37 @@ async def test_assets_list_search_and_pagination(client: AsyncClient):
     assert len(res_search.json()["items"]) == 2
 
     # Test offset pagination (limit 2)
-    res_page1 = await client.get("/api/v1/assets?limit=2&sort_by=value&sort_order=asc", headers=headers)
+    res_page1 = await client.get(
+        "/api/v1/assets?limit=2&sort_by=value&sort_order=asc", headers=headers
+    )
     page1_data = res_page1.json()
     assert len(page1_data["items"]) == 2
     assert page1_data["items"][0]["value"] == "1.1.1.1"
     assert page1_data["items"][1]["value"] == "api.banana.com"
 
-    res_page2 = await client.get("/api/v1/assets?limit=2&offset=2&sort_by=value&sort_order=asc", headers=headers)
+    res_page2 = await client.get(
+        "/api/v1/assets?limit=2&offset=2&sort_by=value&sort_order=asc", headers=headers
+    )
     page2_data = res_page2.json()
     assert len(page2_data["items"]) == 2
     assert page2_data["items"][0]["value"] == "apple.com"
     assert page2_data["items"][1]["value"] == "banana.com"
 
     # Test keyset pagination (limit 2)
-    res_key1 = await client.get("/api/v1/assets?limit=2&pagination_type=keyset&sort_by=last_seen&sort_order=desc", headers=headers)
+    res_key1 = await client.get(
+        "/api/v1/assets?limit=2&pagination_type=keyset&sort_by=last_seen&sort_order=desc",
+        headers=headers,
+    )
     key1_data = res_key1.json()
     assert len(key1_data["items"]) == 2
     assert "next_cursor" in key1_data
     cursor = key1_data["next_cursor"]
     assert cursor is not None
 
-    res_key2 = await client.get(f"/api/v1/assets?limit=2&pagination_type=keyset&sort_by=last_seen&sort_order=desc&cursor={cursor}", headers=headers)
+    res_key2 = await client.get(
+        f"/api/v1/assets?limit=2&pagination_type=keyset&sort_by=last_seen&sort_order=desc&cursor={cursor}",
+        headers=headers,
+    )
     key2_data = res_key2.json()
     # Should get remaining 2 items
     assert len(key2_data["items"]) == 2

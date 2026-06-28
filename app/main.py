@@ -12,13 +12,13 @@ from app.api import auth, assets, relationships
 async def lifespan(app: FastAPI):
     # 1. Startup: Initialize cache connections
     cache_manager.init_cache()
-    
+
     # 2. Startup: Auto-create tables in database if they do not exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+
     yield
-    
+
     # 3. Shutdown: Close cache client connections
     if cache_manager.redis_cache.client:
         try:
@@ -31,7 +31,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="DarkAtlas Attack Surface Monitoring (ASM) Asset Management System REST API",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Set CORS middleware
@@ -44,9 +44,15 @@ app.add_middleware(
 )
 
 # Register API Routers
-app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
-app.include_router(assets.router, prefix=f"{settings.API_V1_STR}/assets", tags=["Assets"])
-app.include_router(relationships.router, prefix=settings.API_V1_STR, tags=["Relationships"])
+app.include_router(
+    auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"]
+)
+app.include_router(
+    assets.router, prefix=f"{settings.API_V1_STR}/assets", tags=["Assets"]
+)
+app.include_router(
+    relationships.router, prefix=settings.API_V1_STR, tags=["Relationships"]
+)
 
 
 @app.get("/", tags=["Root"])
@@ -54,5 +60,5 @@ async def root():
     return {
         "message": f"Welcome to {settings.PROJECT_NAME} REST API",
         "docs_url": "/docs",
-        "status": "healthy"
+        "status": "healthy",
     }

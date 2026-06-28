@@ -31,12 +31,11 @@ async def test_authentication_required(client: AsyncClient):
     # Try reading assets without auth
     response = await client.get("/api/v1/assets")
     assert response.status_code == 401
-    
+
     # Try creating asset without auth
-    response = await client.post("/api/v1/assets", json={
-        "type": "domain",
-        "value": "example.com"
-    })
+    response = await client.post(
+        "/api/v1/assets", json={"type": "domain", "value": "example.com"}
+    )
     assert response.status_code == 401
 
 
@@ -56,12 +55,16 @@ async def test_tenant_isolation(client: AsyncClient):
     """Verify that Tenant 2 cannot access or read assets belonging to Tenant 1."""
     # 1. Create an asset under Tenant 1 using its API Key
     headers_t1 = {"X-API-Key": TENANT_1_KEY}
-    create_response = await client.post("/api/v1/assets", headers=headers_t1, json={
-        "type": "domain",
-        "value": "tenant1-secret.com",
-        "source": "manual",
-        "tags": ["private"]
-    })
+    create_response = await client.post(
+        "/api/v1/assets",
+        headers=headers_t1,
+        json={
+            "type": "domain",
+            "value": "tenant1-secret.com",
+            "source": "manual",
+            "tags": ["private"],
+        },
+    )
     assert create_response.status_code == 201
     asset_id = create_response.json()["id"]
 
@@ -74,8 +77,10 @@ async def test_tenant_isolation(client: AsyncClient):
 
     # 3. Attempt to fetch specific ID under Tenant 2
     get_response = await client.get(f"/api/v1/assets/{asset_id}", headers=headers_t2)
-    assert get_response.status_code == 404  # Returns 404 to avoid leaking existence of the asset
-    
+    assert (
+        get_response.status_code == 404
+    )  # Returns 404 to avoid leaking existence of the asset
+
     # 4. Success reading it under Tenant 1
     get_response_t1 = await client.get(f"/api/v1/assets/{asset_id}", headers=headers_t1)
     assert get_response_t1.status_code == 200

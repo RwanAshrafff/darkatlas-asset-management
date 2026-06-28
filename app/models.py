@@ -25,58 +25,38 @@ class AssetStatus(str, enum.Enum):
 
 class Asset(Base):
     __tablename__ = "assets"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        nullable=False,
-        index=True
+        UUID(as_uuid=True), nullable=False, index=True
     )
     type: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False
+        String(50), nullable=False
     )  # AssetType enum as string
     value: Mapped[str] = mapped_column(
-        String(512),
-        nullable=False,
-        index=True
+        String(512), nullable=False, index=True
     )  # Canonical value
     status: Mapped[str] = mapped_column(
-        String(50),
-        default=AssetStatus.ACTIVE.value,
-        nullable=False
+        String(50), default=AssetStatus.ACTIVE.value, nullable=False
     )  # AssetStatus enum as string
     first_seen: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     last_seen: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
-    source: Mapped[str] = mapped_column(
-        String(100),
-        default="import",
-        nullable=False
-    )
-    tags: Mapped[list[str]] = mapped_column(
-        ARRAY(String),
-        default=list,
-        nullable=False
-    )
+    source: Mapped[str] = mapped_column(String(100), default="import", nullable=False)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list, nullable=False)
     # Use metadata_ to avoid shadowing SQLAlchemy Base.metadata, map it to PG column "metadata"
     metadata_: Mapped[dict] = mapped_column(
-        "metadata",
-        JSONB,
-        default=dict,
-        nullable=False
+        "metadata", JSONB, default=dict, nullable=False
     )
 
     __table_args__ = (
@@ -86,23 +66,20 @@ class Asset(Base):
 
 class Relationship(Base):
     __tablename__ = "relationships"
-    
+
     from_asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("assets.id", ondelete="CASCADE"),
-        primary_key=True
+        primary_key=True,
     )
     to_asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("assets.id", ondelete="CASCADE"),
-        primary_key=True
+        primary_key=True,
     )
     relationship_type: Mapped[str] = mapped_column(
-        String(100),
-        primary_key=True
+        String(100), primary_key=True
     )  # e.g., 'parent', 'covers', 'resolves_to'
     is_bidirectional: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False
+        Boolean, default=False, nullable=False
     )

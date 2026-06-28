@@ -12,7 +12,9 @@ from app.main import app
 
 # Async test engine
 test_engine = create_async_engine(settings.POSTGRES_ASYNC_URI, future=True)
-TestSession = async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
+TestSession = async_sessionmaker(
+    bind=test_engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 @pytest.fixture(scope="session")
@@ -46,9 +48,9 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with test_engine.connect() as connection:
         transaction = await connection.begin()
         session = AsyncSession(bind=connection, expire_on_commit=False)
-        
+
         yield session
-        
+
         await session.close()
         await transaction.rollback()
 
@@ -56,20 +58,20 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """HTTP client fixture for testing endpoints."""
+
     # Override get_db_session to use the test session bound to the active transaction
     async def _override_db():
         yield db_session
 
     app.dependency_overrides[get_db_session] = _override_db
-    
+
     # Initialize cache manager (will use in-memory fallback if Redis container is not running)
     cache_manager.init_cache()
     await cache_manager.in_memory_cache.clear()
-    
+
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://testserver"
+        transport=ASGITransport(app=app), base_url="http://testserver"
     ) as ac:
         yield ac
-        
+
     app.dependency_overrides.clear()

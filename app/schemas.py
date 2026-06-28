@@ -13,8 +13,7 @@ class AssetBase(BaseModel):
     source: str = "import"
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        validation_alias=AliasChoices("metadata", "metadata_")
+        default_factory=dict, validation_alias=AliasChoices("metadata", "metadata_")
     )
 
     @field_validator("value")
@@ -60,9 +59,13 @@ class AssetResponse(AssetBase):
 
 # Schema for bulk import items which can contain temporary IDs and relationship fields
 class BulkImportItem(AssetBase):
-    id: Optional[str] = None  # Temporary ID (e.g., "a1", "a2") used for linking relationships in the batch
+    id: Optional[str] = (
+        None  # Temporary ID (e.g., "a1", "a2") used for linking relationships in the batch
+    )
 
-    model_config = ConfigDict(extra="allow")  # Allow relationship fields like "parent", "covers"
+    model_config = ConfigDict(
+        extra="allow"
+    )  # Allow relationship fields like "parent", "covers"
 
 
 class ImportErrorDetail(BaseModel):
@@ -112,5 +115,5 @@ class NeighborResponse(BaseModel):
 class AssetWithNeighborsResponse(BaseModel):
     asset: AssetResponse
     neighbors: list[NeighborResponse]
-    
+
     model_config = ConfigDict(from_attributes=True)
