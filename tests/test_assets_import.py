@@ -69,6 +69,7 @@ async def test_bulk_import_idempotency_and_merges(client: AsyncClient, db_sessio
     assert response.json()["success_count"] == 1
 
     # Verify db count is still 2 (deduplicated)
+    db_session.expire_all()
     res = await db_session.execute(stmt)
     assets_new = res.scalars().all()
     assert len(assets_new) == 2
