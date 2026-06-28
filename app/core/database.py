@@ -8,6 +8,7 @@ from app.core.config import settings
 engine = create_async_engine(
     settings.POSTGRES_ASYNC_URI,
     echo=False,  # Set to True for SQL logging in development
+    pool_pre_ping=True,
     future=True,
 )
 
@@ -16,6 +17,8 @@ async_session_maker = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
 )
 
 

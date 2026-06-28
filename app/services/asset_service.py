@@ -268,35 +268,18 @@ async def bulk_import_assets(
             "last_seen": now_utc,
             "source": item.source,
             "tags": item.tags,
-            "metadata": item.metadata  # database column is metadata
+            "metadata_": item.metadata  # use mapped attribute name to avoid SQLAlchemy Base.metadata
         })
 
     # Prepare PostgreSQL bulk upsert statement
     stmt = pg_insert(Asset).values(upsert_values)
     
-    # Custom array union query for SQLAlchemy/PostgreSQL ON CONFLICT DO UPDATE
-    # Set union of tags: array_cat(coalesce(tags, '{}'), coalesce(excluded.tags, '{}')) select distinct unnested
-    tags_union_subquery = sa.func.array(
-        sa.select(sa.literal_column("val").distinct())
-        .select_from(
-            sa.func.unnest(
-                sa.func.array_cat(
-                    sa.func.coalesce(Asset.tags, sa.cast(sa.func.array([]), ARRAY(sa.String))),
-                    sa.func.coalesce(stmt.excluded.tags, sa.cast(sa.func.array([]), ARRAY(sa.String)))
-                )
-            ).alias("val")
-        ).scalar_subquery()
-    )
-
     update_stmt = stmt.on_conflict_do_update(
         constraint="uq_tenant_type_value",
         set_={
             "status": AssetStatus.ACTIVE.value,  # revert to active if stale/archived
             "last_seen": stmt.excluded.last_seen,
             "source": stmt.excluded.source,
-            # Merge JSONB metadata using PG concat operator (||)
-            "metadata": Asset.metadata_.concat(stmt.excluded.metadata_),
-            "tags": tags_union_subquery
         }
     ).returning(Asset.id, Asset.type, Asset.value)
 
@@ -316,6 +299,24 @@ async def bulk_import_assets(
         db_uuid = db_assets_map.get(key)
         if db_uuid and item.id:
             import_id_to_uuid[item.id] = db_uuid
+
+    # 2c. Normalize tags and metadata in Python so the merge logic stays simple
+    # and avoids fragile SQLAlchemy/PostgreSQL expression edge cases.
+    for item in valid_items:
+        key = (item.type.value, item.value)
+        db_uuid = db_assets_map.get(key)
+        if not db_uuid:
+            continue
+
+        asset_res = await db.execute(sa.select(Asset).where(Asset.id == db_uuid))
+        asset = asset_res.scalar_one()
+
+        existing_tags = list(asset.tags or [])
+        merged_tags = sorted({*existing_tags, *(item.tags or [])})
+        asset.tags = merged_tags
+
+        existing_metadata = asset.metadata_ or {}
+        asset.metadata_ = {**existing_metadata, **(item.metadata or {})}
 
     # 3. Parse Relationships Graph Phase
     relationships_to_insert = []

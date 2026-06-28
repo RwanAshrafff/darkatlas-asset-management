@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.core.database import Base, get_db_session
@@ -11,8 +12,18 @@ from app.core.cache import cache_manager
 from app.main import app
 
 # Async test engine
-test_engine = create_async_engine(settings.POSTGRES_ASYNC_URI, future=True)
-TestSession = async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
+test_engine = create_async_engine(
+    settings.POSTGRES_ASYNC_URI,
+    future=True,
+    poolclass=NullPool,
+)
+TestSession = async_sessionmaker(
+    bind=test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
+)
 
 
 @pytest.fixture(scope="session")
@@ -46,9 +57,9 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with test_engine.connect() as connection:
         transaction = await connection.begin()
         session = AsyncSession(bind=connection, expire_on_commit=False)
-        
+
         yield session
-        
+
         await session.close()
         await transaction.rollback()
 
@@ -56,9 +67,11 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """HTTP client fixture for testing endpoints."""
-    # Override get_db_session to use the test session bound to the active transaction
+    # Override get_db_session with a fresh session per request so requests never
+    # share the same asyncpg connection.
     async def _override_db():
-        yield db_session
+        async with TestSession() as session:
+            yield session
 
     app.dependency_overrides[get_db_session] = _override_db
     

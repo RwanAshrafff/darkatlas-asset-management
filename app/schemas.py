@@ -14,7 +14,8 @@ class AssetBase(BaseModel):
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(
         default_factory=dict,
-        validation_alias=AliasChoices("metadata", "metadata_")
+        validation_alias=AliasChoices("metadata_", "metadata"),
+        serialization_alias="metadata"
     )
 
     @field_validator("value")
