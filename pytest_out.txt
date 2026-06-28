@@ -1,0 +1,9 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.5, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\HP\AppData\Local\Programs\Python\Python310\python.exe
+cachedir: .pytest_cache
+rootdir: D:\NU\Assessment
+plugins: anyio-4.6.0, langsmith-0.4.38, asyncio-1.4.0
+asyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/test_assets_import.py::test_bulk_import_idempotency_and_merges 

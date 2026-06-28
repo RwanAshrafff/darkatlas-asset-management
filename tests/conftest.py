@@ -37,9 +37,8 @@ def event_loop():
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="function", autouse=True)
 async def setup_db():
-    """Create database tables before tests start, and drop them after all tests complete."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -50,18 +49,8 @@ async def setup_db():
 
 @pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Run each test in an isolated transaction.
-    Transaction is automatically rolled back after the test completes.
-    """
-    async with test_engine.connect() as connection:
-        transaction = await connection.begin()
-        session = AsyncSession(bind=connection, expire_on_commit=False)
-
+    async with TestSession() as session:
         yield session
-
-        await session.close()
-        await transaction.rollback()
 
 
 @pytest_asyncio.fixture

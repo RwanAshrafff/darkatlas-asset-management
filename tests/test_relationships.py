@@ -94,7 +94,7 @@ async def test_import_integration_with_provided_json(client: AsyncClient, db_ses
     and returns correct neighbors in the graph.
     """
     # 1. Read Data.json from the workspace
-    data_json_path = Path(__file__).resolve().parents[1] / "Data.json"
+    data_json_path = Path(__file__).parent / "fixtures" / "Data.json"
     with data_json_path.open("r", encoding="utf-8") as f:
         import_data = json.load(f)
 
